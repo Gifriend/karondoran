@@ -13,13 +13,13 @@ export default function EditGovernmentPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
-
-  const [staff, setStaff] = useState<GovernmentStaff | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
   const [photoPreview, setPhotoPreview] = useState<string>("")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [originalPhotoUrl, setOriginalPhotoUrl] = useState<string | null>(null)
+  
   const [formData, setFormData] = useState({
     name: "",
     position: "",
@@ -29,22 +29,16 @@ export default function EditGovernmentPage() {
     sort_order: 0,
   })
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-  )
+  // Hapus 'const supabase = ...' yang tidak terpakai
 
   useEffect(() => {
-    loadGovernmentStaff()
+    if (id) loadGovernmentStaff()
   }, [id])
 
   async function loadGovernmentStaff() {
     try {
       const data = await governmentStaffDB.getById(id)
-
-      // if (error) throw error
       if (data) {
-        setStaff(data)
         setFormData({
           name: data.name,
           position: data.position,
@@ -55,6 +49,8 @@ export default function EditGovernmentPage() {
         })
         if (data.photo_url) {
           setPhotoPreview(data.photo_url)
+          // Simpan URL foto asli
+          setOriginalPhotoUrl(data.photo_url) 
         }
       }
     } catch (err) {
@@ -66,6 +62,7 @@ export default function EditGovernmentPage() {
   }
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    // ... (Fungsi ini sudah benar, tidak perlu diubah) ...
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -91,24 +88,35 @@ export default function EditGovernmentPage() {
     setError("")
 
     try {
-      let photoUrl = staff?.photo_url || ""
+      // Mulai dengan URL foto yang ada
+      let finalPhotoUrl = originalPhotoUrl || ""
 
-      // Upload photo if new one is selected
+      // 1. Jika ada file baru, upload
       if (selectedFile) {
-        const filePath = await storageDB.uploadImage(selectedFile, "staff_photos", id)
-        photoUrl = storageDB.getPublicUrl("staff_photos", filePath)
-      }
+        // Gunakan ID sebagai nama file (upsert akan menimpa)
+        const filePath = await storageDB.uploadImage(selectedFile, "staff_photos", id)
+        finalPhotoUrl = storageDB.getPublicUrl("staff_photos", filePath)
+      }
 
-      // Update staff record
-      await governmentStaffDB.update(id, { // Gunakan helper standar
-        name: formData.name,
-        position: formData.position,
-        level: Number.parseInt(formData.level),
-        description: formData.description,
-        is_active: formData.is_active,
-        sort_order: formData.sort_order,
-        photo_url: photoUrl,
-      })
+      // 2. Update data pegawai di DB
+      await governmentStaffDB.update(id, {
+        name: formData.name,
+        position: formData.position,
+        level: Number.parseInt(formData.level),
+        description: formData.description,
+        is_active: formData.is_active,
+        sort_order: formData.sort_order,
+        photo_url: finalPhotoUrl, // Simpan URL baru (atau yang lama jika tidak berubah)
+      })
+
+      // 3. Hapus foto lama jika kita mengupload foto baru DAN ada foto lama
+      if (selectedFile && originalPhotoUrl && originalPhotoUrl !== finalPhotoUrl) {
+        try {
+          await storageDB.deleteImage("staff_photos", originalPhotoUrl)
+        } catch (deleteError) {
+          console.warn("Gagal menghapus foto lama (mungkin file-nya sama):", deleteError)
+        }
+      }
 
       router.push("/admin/government")
     } catch (err) {

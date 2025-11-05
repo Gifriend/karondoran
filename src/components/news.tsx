@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { newsDB } from "@/lib/supabase/db"
 import { NewsItem } from "@/lib/supabase/types"
+import Link from "next/link"
 
 export default function News() {
   const [news, setNews] = useState<NewsItem[]>([])
@@ -93,9 +94,12 @@ export default function News() {
                   </div>
                   <h3 className="text-lg font-bold text-foreground mb-3 line-clamp-2">{item.title}</h3>
                   <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">{item.content}</p>
-                  <button className="text-primary font-semibold text-sm hover:underline self-start">
-                    Baca Selengkapnya →
-                  </button>
+                  <Link 
+                    href={`/berita/${item.id}`} 
+                    className="text-primary font-semibold text-sm hover:underline self-start"
+                  >
+                    Baca Selengkapnya →
+                  </Link>
                 </div>
               </Card>
             ))}

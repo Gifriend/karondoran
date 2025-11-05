@@ -2,20 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { galleryDB } from "@/lib/supabase/db"
-
-interface GalleryItem {
-  id: string
-  title: string
-  category: string
-  image_url: string
-  created_at: string
-}
+import type { Gallery } from "@/lib/supabase/types"
 
 export default function Gallery() {
-  const [images, setImages] = useState<GalleryItem[]>([])
+  const [images, setImages] = useState<Gallery[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState("Semua")
-  const [selectedImage, setSelectedImage] = useState<GalleryItem | null>(null)
+  const [selectedImage, setSelectedImage] = useState<Gallery | null>(null)
 
   useEffect(() => {
     loadGallery()

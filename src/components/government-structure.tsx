@@ -1,35 +1,38 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { getActiveGovernmentStaff, type GovernmentStaff } from "@/lib/supabase/government"
+import { useEffect, useState } from "react";
+// 1. Impor helper & tipe yang benar
+import { getActiveGovernmentStaffDB } from "@/lib/supabase/db";
+import type { GovernmentStaff } from "@/lib/supabase/types";
 
 export default function GovernmentStructure() {
-  const [staff, setStaff] = useState<GovernmentStaff[]>([])
-  const [loading, setLoading] = useState(true)
+  const [staff, setStaff] = useState<GovernmentStaff[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadGovernmentStaff()
-  }, [])
+    loadGovernmentStaff();
+  }, []);
 
   async function loadGovernmentStaff() {
     try {
-      const data = await getActiveGovernmentStaff()
-      setStaff(data)
+      // 2. Panggil fungsi baru dari db.ts
+      const data = await getActiveGovernmentStaffDB();
+      setStaff(data);
     } catch (error) {
-      console.error("Error loading government staff:", error)
+      console.error("Error loading government staff:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   // Group staff by level
-  const groupedByLevel: Record<number, GovernmentStaff[]> = {}
+  const groupedByLevel: Record<number, GovernmentStaff[]> = {};
   staff.forEach((member) => {
     if (!groupedByLevel[member.level]) {
-      groupedByLevel[member.level] = []
+      groupedByLevel[member.level] = [];
     }
-    groupedByLevel[member.level].push(member)
-  })
+    groupedByLevel[member.level].push(member);
+  });
 
   const levelLabels: Record<number, string> = {
     1: "Level 1 - Pimpinan Utama",
@@ -37,17 +40,21 @@ export default function GovernmentStructure() {
     3: "Level 3 - Seksi & Fungsi",
     4: "Level 4 - Staf Senior",
     5: "Level 5 - Staf Junior",
-  }
+  };
 
   if (loading) {
-    return <div className="text-center py-12">Memuat data pemerintah desa...</div>
+    return (
+      <div className="text-center py-12">Memuat data pemerintah desa...</div>
+    );
   }
 
   return (
     <div className="space-y-12">
       {/* Pyramid Structure */}
       <div className="flex flex-col items-center">
-        <h3 className="text-2xl font-bold text-foreground mb-8">Struktur Organisasi Pemerintah Desa</h3>
+        <h3 className="text-2xl font-bold text-foreground mb-8">
+          Struktur Organisasi Pemerintah Desa
+        </h3>
 
         <div className="w-full max-w-4xl">
           {/* Level 1 - Top */}
@@ -109,17 +116,28 @@ export default function GovernmentStructure() {
 
       {/* Detailed List */}
       <div className="grid gap-6">
-        <h3 className="text-2xl font-bold text-foreground text-center">Detail Pegawai Pemerintah Desa</h3>
+        <h3 className="text-2xl font-bold text-foreground text-center">
+          Detail Pegawai Pemerintah Desa
+        </h3>
         {[1, 2, 3, 4, 5].map(
           (level) =>
             groupedByLevel[level] && (
-              <div key={level} className="bg-white rounded-lg p-6 border border-border">
-                <h4 className="text-lg font-semibold text-foreground mb-4">{levelLabels[level]}</h4>
+              <div
+                key={level}
+                className="bg-white rounded-lg p-6 border border-border"
+              >
+                <h4 className="text-lg font-semibold text-foreground mb-4">
+                  {levelLabels[level]}
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {groupedByLevel[level].map((member) => (
-                    <div key={member.id} className="bg-muted/50 rounded-lg p-4 flex gap-4">
+                    <div
+                      key={member.id}
+                      className="bg-muted/50 rounded-lg p-4 flex gap-4"
+                    >
+                      {/* 3. Kode ini akan menampilkan foto (Sudah Benar) */}
                       {member.photo_url && (
-                        <div className="w-16 h-16 flex-shrink-0">
+                        <div className="w-16 h-16 shrink-0">
                           <img
                             src={member.photo_url || "/placeholder.svg"}
                             alt={member.name}
@@ -128,26 +146,33 @@ export default function GovernmentStructure() {
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <h5 className="font-semibold text-foreground truncate">{member.name}</h5>
-                        <p className="text-sm text-primary font-medium">{member.position}</p>
+                        <h5 className="font-semibold text-foreground truncate">
+                          {member.name}
+                        </h5>
+                        <p className="text-sm text-primary font-medium">
+                          {member.position}
+                        </p>
                         {member.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{member.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {member.description}
+                          </p>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            ),
+            )
         )}
       </div>
     </div>
-  )
+  );
 }
 
+// Komponen StaffCard tidak berubah
 interface StaffCardProps {
-  staff: GovernmentStaff
-  level: number
+  staff: GovernmentStaff;
+  level: number;
 }
 
 function StaffCard({ staff, level }: StaffCardProps) {
@@ -157,7 +182,7 @@ function StaffCard({ staff, level }: StaffCardProps) {
     3: "w-24",
     4: "w-20",
     5: "w-16",
-  }
+  };
 
   const textSizes: Record<number, string> = {
     1: "text-sm",
@@ -165,7 +190,7 @@ function StaffCard({ staff, level }: StaffCardProps) {
     3: "text-xs",
     4: "text-[10px]",
     5: "text-[10px]",
-  }
+  };
 
   return (
     <div className="flex flex-col items-center">
@@ -173,17 +198,27 @@ function StaffCard({ staff, level }: StaffCardProps) {
         className={`${sizeClasses[level]} aspect-square rounded-lg bg-gradient-to-br from-primary/20 to-primary/40 border-2 border-primary/50 overflow-hidden`}
       >
         {staff.photo_url ? (
-          <img src={staff.photo_url || "/placeholder.svg"} alt={staff.name} className="w-full h-full object-cover" />
+          <img
+            src={staff.photo_url || "/placeholder.svg"}
+            alt={staff.name}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-white text-lg font-bold">
             {staff.name.charAt(0)}
           </div>
         )}
       </div>
-      <h5 className={`${textSizes[level]} font-semibold text-foreground text-center mt-2 line-clamp-2`}>
+      <h5
+        className={`${textSizes[level]} font-semibold text-foreground text-center mt-2 line-clamp-2`}
+      >
         {staff.name}
       </h5>
-      <p className={`${textSizes[level]} text-primary text-center line-clamp-2`}>{staff.position}</p>
+      <p
+        className={`${textSizes[level]} text-primary text-center line-clamp-2`}
+      >
+        {staff.position}
+      </p>
     </div>
-  )
+  );
 }

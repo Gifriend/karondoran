@@ -1,41 +1,50 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { type GovernmentStaff } from "@/lib/supabase/types"
-import Link from "next/link"
-import { Trash2, Edit, Plus } from "lucide-react"
-import { governmentStaffDB } from "@/lib/supabase/db"
+import { useEffect, useState } from "react";
+// 1. Impor storageDB
+import { governmentStaffDB, storageDB } from "@/lib/supabase/db";
+import type { GovernmentStaff } from "@/lib/supabase/types";
+import Link from "next/link";
+import { Trash2, Edit, Plus } from "lucide-react";
 
 export default function GovernmentPage() {
-  const [staff, setStaff] = useState<GovernmentStaff[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
+  const [staff, setStaff] = useState<GovernmentStaff[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    loadGovernmentStaff()
-  }, [])
+    loadGovernmentStaff();
+  }, []);
 
   async function loadGovernmentStaff() {
     try {
-      setLoading(true)  
-      const data = await governmentStaffDB.getAll("sort_order", true)
-      setStaff(data)
+      setLoading(true);
+      // Urutkan berdasarkan sort_order (terkecil dulu)
+      const data = await governmentStaffDB.getAll("sort_order", true);
+      setStaff(data);
     } catch (err) {
-      setError("Gagal memuat data pemerintah desa")
-      console.error(err)
+      setError("Gagal memuat data pemerintah desa");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
-  async function handleDelete(id: string) {
+  // 2. Perbaiki fungsi handleDelete
+  async function handleDelete(id: string, photoUrl: string | null | undefined) {
     if (confirm("Yakin ingin menghapus pegawai ini?")) {
       try {
-        await governmentStaffDB.delete(id)
-        setStaff(staff.filter((s) => s.id !== id))
+        // Hapus foto dari storage DULU (jika ada)
+        if (photoUrl) {
+          await storageDB.deleteImage("staff_photos", photoUrl);
+        }
+
+        // Hapus data dari database
+        await governmentStaffDB.delete(id);
+        setStaff(staff.filter((s) => s.id !== id));
       } catch (err) {
-        setError("Gagal menghapus pegawai")
-        console.error(err)
+        setError("Gagal menghapus pegawai");
+        console.error(err);
       }
     }
   }
@@ -46,47 +55,56 @@ export default function GovernmentPage() {
     3: "Level 3 - Seksi & Fungsi",
     4: "Level 4 - Staf Senior",
     5: "Level 5 - Staf Junior",
-  }
+  };
 
-  const groupedByLevel: Record<number, GovernmentStaff[]> = {}
+  // Logika pengelompokan (sudah benar)
+  const groupedByLevel: Record<number, GovernmentStaff[]> = {};
   staff.forEach((member) => {
     if (!groupedByLevel[member.level]) {
-      groupedByLevel[member.level] = []
+      groupedByLevel[member.level] = [];
     }
-    groupedByLevel[member.level].push(member)
-  })
+    groupedByLevel[member.level].push(member);
+  });
 
-  if (loading) return <div className="p-6">Memuat data...</div>
+  if (loading) return <div className="p-6">Memuat data...</div>;
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-foreground">Kelola Pemerintah Desa</h1>
+        <h1 className="text-3xl font-bold text-foreground">
+          Kelola Pemerintah Desa
+        </h1>
         <Link
           href="/admin/government/create"
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg"
         >
           <Plus size={20} />
           Tambah Pegawai
         </Link>
       </div>
 
-      {error && <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200">{error}</div>}
+      {error && <div className="p-4 bg-red-50 text-red-700">{error}</div>}
 
       {[1, 2, 3, 4, 5].map(
         (level) =>
           groupedByLevel[level] && (
-            <div key={level} className="bg-white rounded-lg border border-border overflow-hidden">
+            <div
+              key={level}
+              className="bg-white rounded-lg border border-border overflow-hidden"
+            >
               <div className="bg-muted px-6 py-4">
-                <h2 className="font-semibold text-foreground">{levelLabels[level]}</h2>
+                <h2 className="font-semibold text-foreground">
+                  {levelLabels[level]}
+                </h2>
               </div>
               <div className="divide-y">
                 {groupedByLevel[level].map((member) => (
                   <div
                     key={member.id}
-                    className="p-6 flex items-center justify-between hover:bg-muted/50 transition-colors"
+                    className="p-6 flex items-center justify-between hover:bg-muted/50"
                   >
                     <div className="flex items-center gap-4 flex-1">
+                      {/* 3. Kode ini untuk menampilkan foto (Sudah Benar) */}
                       {member.photo_url && (
                         <img
                           src={member.photo_url || "/placeholder.svg"}
@@ -95,28 +113,36 @@ export default function GovernmentPage() {
                         />
                       )}
                       <div>
-                        <h3 className="font-semibold text-foreground">{member.name}</h3>
-                        <p className="text-sm text-muted-foreground">{member.position}</p>
-                        {member.description && (
-                          <p className="text-sm text-muted-foreground mt-1">{member.description}</p>
-                        )}
+                        <h3 className="font-semibold text-foreground">
+                          {member.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {member.position}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <span
-                        className={`px-3 py-1 rounded text-sm font-medium ${member.is_active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}
+                        className={`px-3 py-1 rounded text-sm ${
+                          member.is_active
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
                       >
                         {member.is_active ? "Aktif" : "Tidak Aktif"}
                       </span>
                       <Link
                         href={`/admin/government/${member.id}/edit`}
-                        className="p-2 hover:bg-primary/10 rounded transition-colors"
+                        className="p-2 hover:bg-primary/10 rounded"
                       >
                         <Edit size={18} className="text-primary" />
                       </Link>
                       <button
-                        onClick={() => handleDelete(member.id)}
-                        className="p-2 hover:bg-red-50 rounded transition-colors"
+                        // 4. Perbarui onClick untuk mengirim foto
+                        onClick={() =>
+                          handleDelete(member.id, member.photo_url)
+                        }
+                        className="p-2 hover:bg-red-50 rounded"
                       >
                         <Trash2 size={18} className="text-red-500" />
                       </button>
@@ -125,8 +151,8 @@ export default function GovernmentPage() {
                 ))}
               </div>
             </div>
-          ),
+          )
       )}
     </div>
-  )
+  );
 }

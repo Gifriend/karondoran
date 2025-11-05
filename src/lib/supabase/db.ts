@@ -154,3 +154,14 @@ export const settingsDB = {
     return true
   },
 }
+export const getActiveGovernmentStaffDB = async () => {
+  const supabase = getSupabaseClient() // Ambil client yang baru
+  const { data, error } = await supabase
+    .from("government_staff")
+    .select("*")
+    .eq("is_active", true) // 1. Hanya ambil yang aktif
+    .order("sort_order", { ascending: true }) // 2. Urutkan berdasarkan 'sort_order'
+  
+  if (error) throw error
+  return data as GovernmentStaff[]
+}
